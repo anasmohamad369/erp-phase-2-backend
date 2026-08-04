@@ -1,0 +1,310 @@
+-- V1__init_schema.sql: Classroom Digital Board Management System Database Schema
+
+-- 1. USERS & ROLES
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20),
+    role VARCHAR(30) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    version BIGINT NOT NULL DEFAULT 0
+);
+
+-- 2. PRINCIPALS
+CREATE TABLE principals (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    qualification VARCHAR(100),
+    office_room VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. TEACHERS
+CREATE TABLE teachers (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    employee_id VARCHAR(50) NOT NULL UNIQUE,
+    designation VARCHAR(100) NOT NULL,
+    specialization VARCHAR(100),
+    joining_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. CLASSES
+CREATE TABLE classes (
+    id BIGSERIAL PRIMARY KEY,
+    grade VARCHAR(20) NOT NULL,
+    section VARCHAR(10) NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    class_teacher_id BIGINT REFERENCES teachers(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_class_grade_section UNIQUE(grade, section, academic_year)
+);
+
+-- 5. CLASSROOMS (Physical digital board rooms)
+CREATE TABLE classrooms (
+    id BIGSERIAL PRIMARY KEY,
+    room_number VARCHAR(20) NOT NULL UNIQUE,
+    building VARCHAR(50),
+    digital_board_device_id VARCHAR(100) NOT NULL UNIQUE,
+    ip_address VARCHAR(45),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    current_class_id BIGINT REFERENCES classes(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. SUBJECTS
+CREATE TABLE subjects (
+    id BIGSERIAL PRIMARY KEY,
+    code VARCHAR(30) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. TEACHER ASSIGNMENTS
+CREATE TABLE teacher_assignments (
+    id BIGSERIAL PRIMARY KEY,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    academic_year VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_teacher_class_subject UNIQUE(teacher_id, class_id, subject_id, academic_year)
+);
+
+-- 8. STUDENTS (Hosteller students linked to classes)
+CREATE TABLE students (
+    id BIGSERIAL PRIMARY KEY,
+    roll_number VARCHAR(50) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    admission_number VARCHAR(50) NOT NULL UNIQUE,
+    gender VARCHAR(10),
+    hostel_block VARCHAR(50),
+    room_number VARCHAR(20),
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_student_roll_class UNIQUE(roll_number, class_id)
+);
+
+-- 9. TIMETABLE
+CREATE TABLE timetable (
+    id BIGSERIAL PRIMARY KEY,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    classroom_id BIGINT NOT NULL REFERENCES classrooms(id) ON DELETE CASCADE,
+    day_of_week VARCHAR(15) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    period_number INT NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. ATTENDANCE
+CREATE TABLE attendance (
+    id BIGSERIAL PRIMARY KEY,
+    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL, -- PRESENT, ABSENT, LATE, EXCUSED
+    remarks VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_attendance_student_date UNIQUE(student_id, date)
+);
+
+-- 11. CHAPTERS
+CREATE TABLE chapters (
+    id BIGSERIAL PRIMARY KEY,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    chapter_number INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_chapter_subject_class_num UNIQUE(subject_id, class_id, chapter_number)
+);
+
+-- 12. TOPICS
+CREATE TABLE topics (
+    id BIGSERIAL PRIMARY KEY,
+    chapter_id BIGINT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    topic_number INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    estimated_hours NUMERIC(4,2) DEFAULT 1.0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 13. SYLLABUS PROGRESS
+CREATE TABLE syllabus_progress (
+    id BIGSERIAL PRIMARY KEY,
+    topic_id BIGINT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completion_date DATE,
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_syllabus_topic_class UNIQUE(topic_id, class_id)
+);
+
+-- 14. FILES (Central File Storage metadata)
+CREATE TABLE files (
+    id BIGSERIAL PRIMARY KEY,
+    file_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL UNIQUE,
+    file_path VARCHAR(500) NOT NULL,
+    content_type VARCHAR(100) NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    uploader_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 15. TEACHER DIARY
+CREATE TABLE teacher_diary (
+    id BIGSERIAL PRIMARY KEY,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    entry_date DATE NOT NULL,
+    period_number INT NOT NULL,
+    topics_covered TEXT NOT NULL,
+    teaching_methodology TEXT,
+    reflection_notes TEXT,
+    board_state_summary TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 16. WORKSHEETS
+CREATE TABLE worksheets (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    file_id BIGINT REFERENCES files(id) ON DELETE SET NULL,
+    due_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. HOMEWORK
+CREATE TABLE homework (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    instructions TEXT NOT NULL,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    file_id BIGINT REFERENCES files(id) ON DELETE SET NULL,
+    assigned_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    due_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 18. RECORDINGS (Classroom Digital Board Recorded Sessions)
+CREATE TABLE recordings (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    file_id BIGINT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    duration_seconds INT NOT NULL,
+    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 19. LEAVE REQUESTS
+CREATE TABLE leave_requests (
+    id BIGSERIAL PRIMARY KEY,
+    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED
+    reviewed_by BIGINT REFERENCES principals(id) ON DELETE SET NULL,
+    rejection_reason VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 20. SUBSTITUTIONS
+CREATE TABLE substitutions (
+    id BIGSERIAL PRIMARY KEY,
+    leave_request_id BIGINT REFERENCES leave_requests(id) ON DELETE CASCADE,
+    timetable_id BIGINT NOT NULL REFERENCES timetable(id) ON DELETE CASCADE,
+    original_teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    substitute_teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+    substitution_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ASSIGNED', -- ASSIGNED, COMPLETED, CANCELLED
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 21. ANNOUNCEMENTS
+CREATE TABLE announcements (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    content TEXT NOT NULL,
+    author_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_role VARCHAR(30), -- NULL for all, ROLE_TEACHER, etc.
+    target_class_id BIGINT REFERENCES classes(id) ON DELETE SET NULL,
+    is_urgent BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 22. NOTIFICATIONS
+CREATE TABLE notifications (
+    id BIGSERIAL PRIMARY KEY,
+    recipient_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 23. REFRESH TOKENS
+CREATE TABLE refresh_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- INDEXES FOR PERFORMANCE
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_attendance_date ON attendance(date);
+CREATE INDEX idx_timetable_day_teacher ON timetable(day_of_week, teacher_id);
+CREATE INDEX idx_timetable_day_class ON timetable(day_of_week, class_id);
+CREATE INDEX idx_teacher_diary_teacher_date ON teacher_diary(teacher_id, entry_date);
+CREATE INDEX idx_notifications_recipient ON notifications(recipient_id, is_read);
