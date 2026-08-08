@@ -2,9 +2,9 @@
 
 -- 1. SEED USERS (BCrypt Hash for 'password123' is $2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xD00DMxs.AQ8H9a.)
 INSERT INTO users (id, username, password, email, first_name, last_name, phone, role, enabled) VALUES
-(1, 'principal_admin', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xD00DMxs.AQ8H9a.', 'principal@school.edu', 'Arthur', 'Pendelton', '+19876543210', 'ROLE_PRINCIPAL', true),
-(2, 'teacher_john', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xD00DMxs.AQ8H9a.', 'john.doe@school.edu', 'John', 'Doe', '+19876543211', 'ROLE_TEACHER', true),
-(3, 'teacher_sarah', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xD00DMxs.AQ8H9a.', 'sarah.connor@school.edu', 'Sarah', 'Connor', '+19876543212', 'ROLE_TEACHER', true);
+(1, 'principal_admin', '$2b$12$MiPjv.0FRAFjSZtn19.bo.PzI.5WDrUJbUVLWVinASRfJb/jJOt4q', 'principal@school.edu', 'Arthur', 'Pendelton', '+19876543210', 'ROLE_PRINCIPAL', true),
+(2, 'teacher_john', '$2b$12$MiPjv.0FRAFjSZtn19.bo.PzI.5WDrUJbUVLWVinASRfJb/jJOt4q', 'john.doe@school.edu', 'John', 'Doe', '+19876543211', 'ROLE_TEACHER', true),
+(3, 'teacher_sarah', '$2b$12$MiPjv.0FRAFjSZtn19.bo.PzI.5WDrUJbUVLWVinASRfJb/jJOt4q', 'sarah.connor@school.edu', 'Sarah', 'Connor', '+19876543212', 'ROLE_TEACHER', true);
 
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
 

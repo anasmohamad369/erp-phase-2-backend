@@ -37,7 +37,7 @@ public class ReportService {
 
         Map<String, Double> subjectSyllabusCompletionRates = new HashMap<>();
         for (Subject s : subjects) {
-            long totalCompleted = syllabusProgressRepository.countBySchoolClassIdAndTopicChapterSubjectId(1L, s.getId());
+            long totalCompleted = syllabusProgressRepository.countBySchoolClassIdAndTopicChapterSubjectIdAndIsCompletedTrue(1L, s.getId());
             subjectSyllabusCompletionRates.put(s.getName(), (double) totalCompleted);
         }
 
